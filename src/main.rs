@@ -1,7 +1,19 @@
 use std::{fmt::Display, mem, time::Instant};
 
+use arrayvec::ArrayVec;
 use Color::*;
 use LowerUpper::*;
+
+// 75µs ish
+// printing: 8µs ish
+
+#[derive(Copy, Clone)]
+enum Side {
+    A = 0, 
+    B = 1, 
+    C = 2, 
+    D = 3,
+}
 
 #[repr(u8)]
 #[derive(Debug, PartialEq, Eq)]
@@ -43,34 +55,22 @@ impl Part {
         // Same color, but different lower/upper
         self.inner ^ other.inner == 0b100
     }
-
-    fn char(&self) -> char {
-        let letter = match self.color() {
-            Purple => 'P',
-            Green => 'G',
-            Yellow => 'Y',
-            Blue => 'B',
-        };
-
-        match self.lower_upper() {
-            Upper => letter,
-            Lower => letter.to_ascii_lowercase(),
-        }
-    }
 }
 
 impl Display for Part {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "({:?} {:?})", self.color(), self.lower_upper())
+        let letter = match (self.color(), self.lower_upper()) {
+            (Purple, Upper) => 'P',
+            (Purple, Lower) => 'p',
+            (Green, Upper)  => 'G',
+            (Green, Lower)  => 'g',
+            (Yellow, Upper) => 'Y',
+            (Yellow, Lower) => 'y',
+            (Blue, Upper)   => 'B',
+            (Blue, Lower)   => 'b',
+        };
+        write!(f, "{}", letter)
     }
-}
-
-#[derive(Copy, Clone)]
-enum Side {
-    A = 0, 
-    B = 1, 
-    C = 2, 
-    D = 3,
 }
 
 // Todo: Pack into a single u16?
@@ -97,6 +97,7 @@ struct Rule {
     second: Option<(Side, usize, Side)>
 }
 
+#[cfg(debug_assertions)]
 fn print_tiles(tiles: &[Tile], order: [usize; 9]) {
     let mut lines = vec![String::new(); 9];
     for x in 0..3 {
@@ -105,9 +106,9 @@ fn print_tiles(tiles: &[Tile], order: [usize; 9]) {
             let tile = tiles[order[i]];
             let line0 = y * 3;
             
-            lines[line0].push_str(&format!("  {}  ", tile.get(Side::A).char()));
-            lines[line0 + 1].push_str(&format!("{} {} {}", tile.get(Side::D).char(), tile.id, tile.get(Side::B).char()));
-            lines[line0 + 2].push_str(&format!("  {}  ", tile.get(Side::C).char()));
+            lines[line0].push_str(&format!("  {}  ", tile.get(Side::A)));
+            lines[line0 + 1].push_str(&format!("{} {} {}", tile.get(Side::D), tile.id, tile.get(Side::B)));
+            lines[line0 + 2].push_str(&format!("  {}  ", tile.get(Side::C)));
         }
     }
 
@@ -121,17 +122,20 @@ fn main() {
     let before = Instant::now();
     let mut checks = 0;
 
+    let mut prev_tiles = ArrayVec::<Tile, 9>::new();
+
     for i in 0..TILES.len() {
-        let mut prev_tiles = vec![TILES[i]];
+        prev_tiles.push(TILES[i]);
         let mut remaining_tiles = TILES.to_vec();
         remaining_tiles.swap_remove(i);
-        rec_solve(&mut prev_tiles, &mut remaining_tiles, &mut checks);
+        rec_solve(&mut prev_tiles, &remaining_tiles, &mut checks);
+        prev_tiles.pop();
     }
 
     println!("{checks} rotations in {:?}", before.elapsed())
 }
 
-fn rec_solve(prev_tiles: &mut Vec<Tile>, remaining_tiles: &mut Vec<Tile>, rotations: &mut usize) {
+fn rec_solve(prev_tiles: &mut ArrayVec<Tile, 9>, remaining_tiles: &Vec<Tile>, rotations: &mut usize) {
     if remaining_tiles.is_empty() {
         println!("{}", prev_tiles.iter().map(|t| t.id.to_string()).collect::<Vec<String>>().join(", "));
         #[cfg(debug_assertions)]{
@@ -167,7 +171,7 @@ fn rec_solve(prev_tiles: &mut Vec<Tile>, remaining_tiles: &mut Vec<Tile>, rotati
     }
 }
 
-fn check_rule((own_side, other_idx, other_side): (Side, usize, Side), tile: Tile, tiles: &Vec<Tile>) -> bool {
+fn check_rule((own_side, other_idx, other_side): (Side, usize, Side), tile: Tile, tiles: &ArrayVec<Tile, 9>) -> bool {
     let own_part = tile.get(own_side);
     let other_part = tiles[other_idx].get(other_side);
     own_part.matches(other_part)
