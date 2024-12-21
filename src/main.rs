@@ -111,7 +111,6 @@ impl Display for Part {
     }
 }
 
-// Todo: Pack into a single u16?
 #[derive(Copy, Clone, Debug)]
 struct Tile {
     id: u8,
@@ -165,7 +164,7 @@ fn read_tiles_from_file(path: &str) -> [Tile; 9] {
 #[derive(Copy, Clone)]
 struct Rule {
     // (self's side, other tile idx, other tile side)
-    first: (Side, usize, Side), // Todo: Wrap in packed other type
+    first: (Side, usize, Side),
     second: Option<(Side, usize, Side)>
 }
 
