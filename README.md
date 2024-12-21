@@ -17,6 +17,12 @@ Result on my Ryzen 5 5600x in release mode:
 
     48.19µs
 
+Order of tiles:
+
+    2  1  8
+    3  0  7
+    4  5  6
+
 When pretty printing in debug mode:
 
     7, 9, 1, 3, 8, 4, 6, 2, 5
