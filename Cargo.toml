@@ -5,3 +5,4 @@ edition = "2024"
 
 [dependencies]
 arrayvec = "0.7.6"
+const_for = "0.1.5"
